@@ -63,10 +63,43 @@ def titlePage(nameUrl):
             links.append(link[0])
     return {'Cim:': title, 'Eredet cim' : info[0], 'Angol cim' : info[1], 'Egyeb cimek': info[2], 'tipus' : info[3]+"-"+info[4], 'hossz': info[5], 'datum' :info[6],'Ismerteto': description, 'linkek': links }
 
+
+def search(searchText):
+    URL=baseURL+"?s="+searchText;
+    response = requests.get(URL)
+    soup = BeautifulSoup(response.text, "html.parser")
+    if "Ilyen Anime nincs Kohai" in soup:
+        return "Ilyen Anime nincs Kohai"
+    else:
+        pageNum=str(soup.findAll('a',class_='page-numbers')).split(',')
+        db=1
+        for y in pageNum:
+            if y.find("<a class=\"page-numbers\"") != -1:
+                db+=1
+        i=1
+        my_json_stringList=[]
+        while i <=db:
+            URL=baseURL+"page/"+str(i)+"?s="+searchText;
+            response = requests.get(URL)
+            soup = BeautifulSoup(response.text, "html.parser")
+            divContent = soup.findAll('div',class_='columns postbox')
+            for x in divContent:
+                if x.find('a')['href']!=baseURL+"hibajelentes/":
+                    title=x.find('a')["title"]
+                    titleURL=x.find('a')["href"]
+                    titlePic=x.find('img')["src"]
+                    my_json_stringList.append(json.dumps({
+                            'cim ':title,
+                            'anime urlje ': titleURL,
+                            'anime icon ': titlePic
+                        }))
+            i+=1
+        return my_json_stringList
+
 class AnimeGun(Resource):
     def get(self,reqType='',startLetter='',animePageInfo='',searchText=''):
-        if reqType == "s":
-            return "Kereses fejlesztes alatt", 200
+        if reqType == "search":
+            return search(searchText), 200
         if reqType == "StartLetter":
             return cat(startLetter), 200
         if reqType == "AnimeInfoPage":
